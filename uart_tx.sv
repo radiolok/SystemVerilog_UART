@@ -22,7 +22,7 @@ initial begin
 	assert(PARITY_CHECK == "NONE" || PARITY_CHECK == "ODD" || PARITY_CHECK == "EVEN") else
 	$fatal(1,"Input error in parity check method");
 
-	assert(CLK_FREQ/BAUD_RATE >= 16) else
+	assert(CLK_PER_BIT >= 16) else
 	$fatal(1,"the CLK_FREQ must be 16 times larger than BAUD_RATE");
 
 	assert(DATA_WIDTH >= 2)	else 
@@ -38,6 +38,9 @@ initial begin
 	$fatal(1, "Too many stop Bits");
 end
 
+localparam CLK_PER_BIT	 = CLK_FREQ/BAUD_RATE;
+localparam CLK_PER_BIT_W = $clog2(CLK_PER_BIT);
+
 /*****************************************************************************
 *                                 variable                                  *
 *****************************************************************************/
@@ -47,7 +50,7 @@ reg    [DATA_WIDTH+STOP_BITS+1 : 0]    odd_pc_data  = '1 ;
 reg    [DATA_WIDTH+STOP_BITS+1 : 0]    even_pc_data = '1 ;
 
 // counters
-reg    [$clog2(CLK_FREQ/BAUD_RATE)-1 : 0]    signal_bit_cnter = CLK_FREQ/BAUD_RATE - 2 ;
+reg    [CLK_PER_BIT_W-1 : 0]   						 signal_bit_cnter = (CLK_PER_BIT_W)'(CLK_PER_BIT - 2) ;
 reg    [$clog2(DATA_WIDTH+STOP_BITS+1)-1     : 0]    non_pc_data_cnter ;
 reg    [$clog2(DATA_WIDTH+STOP_BITS+2)-1     : 0]    pc_data_cnter     ;
 
@@ -96,11 +99,11 @@ always_ff @(posedge clk)
 *****************************************************************************/
 always_ff @(posedge clk) begin
 	if (rst)
-		signal_bit_cnter <= CLK_FREQ/BAUD_RATE - 1;
+		signal_bit_cnter <= (CLK_PER_BIT_W)'(CLK_PER_BIT-1);
 	else if (tx_fsm) 
-		signal_bit_cnter <= signal_bit_cnter == 0 ? CLK_FREQ/BAUD_RATE - 1 : signal_bit_cnter - 1;
+		signal_bit_cnter <= signal_bit_cnter == 0 ? (CLK_PER_BIT_W)'(CLK_PER_BIT): (CLK_PER_BIT_W)'(signal_bit_cnter - (CLK_PER_BIT_W)'(1'd1));
 	else if (!tx_fsm)
-		signal_bit_cnter <= CLK_FREQ/BAUD_RATE - 2;
+		signal_bit_cnter <= (CLK_PER_BIT_W)'(CLK_PER_BIT-1);
 	
 	if (rst) begin
 		non_pc_data_cnter <= 0;
