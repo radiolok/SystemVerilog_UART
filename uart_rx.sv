@@ -4,15 +4,15 @@ module uart_rx#(
 	parameter CLK_FREQ     = 50000000 ,
 	parameter BAUD_RATE    = 9600
 )(
-     input                                 clk     ,
-     input                                 rst     ,
+     input  logic                          clk     ,
+     input  logic                          rst     ,
 
-     input                                 rx      ,
-     input                                 i_rdy   ,
+     input   logic                          rx      ,
+     input   logic                          i_rdy   ,
 
-    output    reg                          o_vld   ,
-    output    reg                          pc_pass , // pc_pass == 1 represent parity check pass.This signal is valid simultaneously with o_vld.
-    output    reg    [DATA_WIDTH-1 : 0]    o_data
+    output    logic                          o_vld   ,
+    output    logic                          pc_pass , // pc_pass == 1 represent parity check pass.This signal is valid simultaneously with o_vld.
+    output    logic    [DATA_WIDTH-1 : 0]    o_data
 ) ;
 
 
@@ -42,21 +42,21 @@ end
 *                                 variable                                  *
 *****************************************************************************/
 // for sampling
-reg     [3 : 0]    rx_buffer = '1     ;
-wire               sample             ;
-reg                pc_sample_time     ; // pc_sample_time == 1 represent all data bits and pc bit are sampled
-reg                non_pc_sample_time ; // non_pc_sample_time == 1 represent all data bits are sampled
+logic     [3 : 0]    rx_buffer          ;
+logic                sample             ;
+logic                pc_sample_time     ; // pc_sample_time == 1 represent all data bits and pc bit are sampled
+logic                non_pc_sample_time ; // non_pc_sample_time == 1 represent all data bits are sampled
 
 // counter
-reg    [CLK_PER_BIT_W-1 : 0]               signal_bit_cnter = (CLK_PER_BIT_W)'(CLK_PER_BIT-1);
-reg    [$clog2(DATA_WIDTH+2)-1     : 0]    non_pc_data_cnter  ;
-reg    [$clog2(DATA_WIDTH+3)-1     : 0]    pc_data_cnter      ;
+logic    [CLK_PER_BIT_W-1 : 0]               signal_bit_cnter   ;
+logic    [$clog2(DATA_WIDTH+2)-1     : 0]    non_pc_data_cnter  ;
+logic    [$clog2(DATA_WIDTH+3)-1     : 0]    pc_data_cnter      ;
 
 // fsm
-reg                        rx_fsm  ; // fsm == 0 represent idle, fsm == 1 represent receiving
+logic                        rx_fsm  ; // fsm == 0 represent idle, fsm == 1 represent receiving
 
 // for output
-reg    [DATA_WIDTH : 0]    rx_data ;
+logic    [DATA_WIDTH : 0]    rx_data ;
 
 /*****************************************************************************
 *                   Control sampling and decision-making                    *

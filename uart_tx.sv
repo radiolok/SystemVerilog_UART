@@ -5,14 +5,14 @@ module uart_tx#(
 	parameter STOP_BITS = 1,
 	parameter BAUD_RATE    = 9600
 )(
-     input                          clk    ,
-     input                          rst    ,
+     input   logic                    clk    ,
+     input   logic                    rst    ,
 
-     input                          i_vld  ,
-     input    [DATA_WIDTH-1 : 0]    i_data ,
+     input   logic                    i_vld  ,
+     input   logic [DATA_WIDTH-1 : 0] i_data ,
 
-    output                          o_rdy  ,
-    output    reg                   tx
+    output    logic                   o_rdy  ,
+    output    logic                   tx
 ) ;
 /*****************************************************************************
 *                             check parameter                               *
@@ -25,13 +25,13 @@ initial begin
 	assert(CLK_PER_BIT >= 16) else
 	$fatal(1,"the CLK_FREQ must be 16 times larger than BAUD_RATE");
 
-	assert(DATA_WIDTH >= 2)	else 
+	assert(DATA_WIDTH >= 2)	else
 	$fatal(1,"The bit width of the data must be reasonable.");
 
 	assert(DATA_WIDTH <= 8)	else
 	$warning("The bit width of the data seems too long.");
 
-	assert(STOP_BITS >= 1)	else 
+	assert(STOP_BITS >= 1)	else
 	$fatal(1,"Too few Stop Bits");
 
 	assert(STOP_BITS <= 2) else
@@ -45,17 +45,17 @@ localparam CLK_PER_BIT_W = $clog2(CLK_PER_BIT);
 *                                 variable                                  *
 *****************************************************************************/
 // data for output
-reg    [DATA_WIDTH+STOP_BITS : 0]    non_pc_data  = '1 ;
-reg    [DATA_WIDTH+STOP_BITS+1 : 0]    odd_pc_data  = '1 ;
-reg    [DATA_WIDTH+STOP_BITS+1 : 0]    even_pc_data = '1 ;
+logic    [DATA_WIDTH+STOP_BITS : 0]      non_pc_data  ;
+logic    [DATA_WIDTH+STOP_BITS+1 : 0]    odd_pc_data  ;
+logic    [DATA_WIDTH+STOP_BITS+1 : 0]    even_pc_data ;
 
 // counters
-reg    [CLK_PER_BIT_W-1 : 0]   						 signal_bit_cnter = (CLK_PER_BIT_W)'(CLK_PER_BIT - 2) ;
-reg    [$clog2(DATA_WIDTH+STOP_BITS+1)-1     : 0]    non_pc_data_cnter ;
-reg    [$clog2(DATA_WIDTH+STOP_BITS+2)-1     : 0]    pc_data_cnter     ;
+logic    [CLK_PER_BIT_W-1 : 0]   						 signal_bit_cnter;
+logic    [$clog2(DATA_WIDTH+STOP_BITS+1)-1     : 0]    non_pc_data_cnter ;
+logic    [$clog2(DATA_WIDTH+STOP_BITS+2)-1     : 0]    pc_data_cnter     ;
 
 //fsm
-reg    tx_fsm = '0 ; // fsm == 0 represent idle, fsm == 1 represent sending
+logic    tx_fsm ; // fsm == 0 represent idle, fsm == 1 represent sending
 
 /*****************************************************************************
 *                                  TX_FSM                                   *
@@ -65,9 +65,9 @@ assign o_rdy = ~tx_fsm;
 always_ff @(posedge clk) begin
 	if (rst)
 		tx_fsm <= 0 ;
-	else if (o_rdy&&i_vld) 
+	else if (o_rdy&&i_vld)
 		tx_fsm <= 1 ;
-	else if (tx_fsm == 1) 
+	else if (tx_fsm == 1)
 		case(PARITY_CHECK)
 			"NONE"  : tx_fsm <= !((non_pc_data_cnter == DATA_WIDTH+STOP_BITS) && (signal_bit_cnter == 0));
 			default : tx_fsm <= !((pc_data_cnter     == DATA_WIDTH+STOP_BITS+1) && (signal_bit_cnter == 0));
@@ -78,7 +78,7 @@ end
 *                            buffer the i_data                              *
 *****************************************************************************/
 
-always_ff @(posedge clk) 
+always_ff @(posedge clk)
 	if (rst) begin
 		non_pc_data  <= '1 ;
 		odd_pc_data  <= '1 ;
@@ -91,7 +91,7 @@ always_ff @(posedge clk)
 		odd_pc_data  <= {{(STOP_BITS){1'b1}}, odd_pc_data[DATA_WIDTH+2  : 1] } ;
 		even_pc_data <= {{(STOP_BITS){1'b1}}, even_pc_data[DATA_WIDTH+2 : 1] } ;
 		non_pc_data  <= {{(STOP_BITS){1'b1}}, non_pc_data[DATA_WIDTH+1  : 1] } ;
-	end 
+	end
 
 
 /*****************************************************************************
@@ -100,11 +100,11 @@ always_ff @(posedge clk)
 always_ff @(posedge clk) begin
 	if (rst)
 		signal_bit_cnter <= (CLK_PER_BIT_W)'(CLK_PER_BIT-1);
-	else if (tx_fsm) 
+	else if (tx_fsm)
 		signal_bit_cnter <= signal_bit_cnter == 0 ? (CLK_PER_BIT_W)'(CLK_PER_BIT): (CLK_PER_BIT_W)'(signal_bit_cnter - (CLK_PER_BIT_W)'(1'd1));
 	else if (!tx_fsm)
 		signal_bit_cnter <= (CLK_PER_BIT_W)'(CLK_PER_BIT-1);
-	
+
 	if (rst) begin
 		non_pc_data_cnter <= 0;
 		pc_data_cnter <= 0;
@@ -115,7 +115,7 @@ always_ff @(posedge clk) begin
 		non_pc_data_cnter <= 0;
 		pc_data_cnter <= 0;
 	end
-end 
+end
 
 /*****************************************************************************
 *                           shift data and output                           *
